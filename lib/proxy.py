@@ -11,6 +11,25 @@ from .paths import CERT_PATH, DATA_DIR, PID_PATH
 PORT = 8080
 ADDON_PATH = Path(__file__).parent.parent / "addon.py"
 
+def _find_mitmdump() -> str:
+    # 1. Same bin dir as the running Python interpreter
+    candidate = Path(sys.executable).parent / "mitmdump"
+    if candidate.exists():
+        return str(candidate)
+    # 2. macOS user-local install: ~/Library/Python/X.Y/bin/ (pip install --user)
+    ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+    candidate = Path.home() / f"Library/Python/{ver}/bin/mitmdump"
+    if candidate.exists():
+        return str(candidate)
+    # 3. PATH
+    import shutil as _shutil
+    found = _shutil.which("mitmdump")
+    if found:
+        return found
+    return "mitmdump"  # let Popen raise a clear FileNotFoundError
+
+MITMDUMP = _find_mitmdump()
+
 
 def _network_services():
     result = subprocess.run(
@@ -82,7 +101,7 @@ def start():
 
     proc = subprocess.Popen(
         [
-            "mitmdump",
+            MITMDUMP,
             "-s", str(ADDON_PATH),
             "-p", str(PORT),
             "--set", f"confdir={DATA_DIR}",

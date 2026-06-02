@@ -56,19 +56,22 @@ def _install_cert():
     if not CERT_PATH.exists():
         print("[ni] Warning: cert not found yet, run `ni start` again after first boot.", file=sys.stderr)
         return
+    # System keychain requires sudo but is trusted by all browsers (Chrome, Arc, Safari).
+    # Login keychain only is not enough for Chromium-based browsers.
+    print("[ni] Installing CA cert into System keychain (sudo required)...")
     result = subprocess.run(
         [
-            "security", "add-trusted-cert",
+            "sudo", "security", "add-trusted-cert",
             "-d", "-r", "trustRoot",
-            "-k", str(Path.home() / "Library/Keychains/login.keychain-db"),
+            "-k", "/Library/Keychains/System.keychain",
             str(CERT_PATH),
         ],
-        capture_output=True,
     )
     if result.returncode != 0:
-        print(f"[ni] Warning: cert install failed: {result.stderr.decode().strip()}", file=sys.stderr)
+        print(f"[ni] Warning: cert install failed. Run manually:", file=sys.stderr)
+        print(f"  sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain {CERT_PATH}", file=sys.stderr)
     else:
-        print(f"[ni] CA cert installed in login keychain.")
+        print("[ni] CA cert installed. All browsers will now trust the interceptor.")
 
 
 def is_running():

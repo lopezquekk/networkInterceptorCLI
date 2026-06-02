@@ -1,0 +1,16 @@
+# Superpowers internal plans and specs
+docs/superpowers/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Pytest
+.pytest_cache/
+
+# macOS
+.DS_Store

@@ -8,6 +8,7 @@ A lightweight, Charles-like HTTP/HTTPS traffic interceptor for macOS, built on [
 - **HTTPS decryption** — installs a trusted CA certificate into the System keychain so browsers (Chrome, Arc, Safari) decrypt TLS without warnings
 - **Capture store** — every request/response is saved to `~/.networkinterceptor/captures.db` with full headers and bodies
 - **Glob-pattern mocking** — intercept any URL pattern and return a local JSON file instead of the real response
+- **iOS Simulator support** — installs the CA cert into booted simulators with a single command; simulators inherit the system proxy automatically
 - **CLI-first** — single `./ni` entry point with intuitive subcommands; no GUI required
 
 ## Requirements
@@ -100,6 +101,23 @@ e5f6g7h8  2026-06-01T10:23:46+00:00  POST api.example.com/login  200  [MOCKED]
 
 Patterns use Unix glob syntax (`*` matches any character sequence). The first matching enabled rule wins.
 
+### iOS Simulator
+
+iOS Simulators on macOS automatically inherit the system proxy, so no extra configuration is needed there. You only need to install the CA cert once per simulator:
+
+```bash
+# List booted simulators
+./ni simulator list
+
+# Install the CA cert into all booted simulators
+./ni simulator install-cert
+
+# Or target a specific simulator by UDID
+./ni simulator install-cert --udid 5A74B7E3-C2C0-444A-81B9-4348AC4A399A
+```
+
+Boot the simulator first, then run `ni simulator install-cert`. After that, HTTPS traffic from the simulator is fully intercepted and visible in `ni list`.
+
 ## File Layout
 
 ```
@@ -111,7 +129,8 @@ networkInterceptor/
     ├── paths.py        # Runtime path constants (~/.networkinterceptor/)
     ├── db.py           # SQLite capture CRUD
     ├── mocks.py        # Mock rules persistence + fnmatch matching
-    └── proxy.py        # Start/stop/status + system proxy + cert install
+    ├── proxy.py        # Start/stop/status + system proxy + cert install
+    └── simulator.py    # iOS Simulator listing + cert installation via xcrun simctl
 ```
 
 ### Runtime data (`~/.networkinterceptor/`)

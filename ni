@@ -82,6 +82,43 @@ def cmd_mock_remove(args):
         sys.exit(1)
 
 
+def cmd_simulator_list(args):
+    from lib.simulator import list_booted
+    devices = list_booted()
+    if not devices:
+        print("No simulators currently booted.")
+        return
+    for d in devices:
+        print(f"{d['udid']}  {d['name']}  ({d['os']})")
+
+
+def cmd_simulator_install_cert(args):
+    from lib.paths import CERT_PATH
+    from lib.simulator import install_cert, list_booted
+    if not CERT_PATH.exists():
+        print("Error: CA cert not found. Run `ni start` first.", file=sys.stderr)
+        sys.exit(1)
+    devices = list_booted()
+    if not devices:
+        print("No simulators currently booted.")
+        return
+    if args.udid:
+        devices = [d for d in devices if d["udid"] == args.udid]
+        if not devices:
+            print(f"Error: Simulator {args.udid} not found among booted devices.", file=sys.stderr)
+            sys.exit(1)
+    any_failed = False
+    for d in devices:
+        ok = install_cert(d["udid"])
+        if ok:
+            print(f"✓ {d['name']} ({d['udid']})")
+        else:
+            print(f"✗ {d['name']} ({d['udid']}) — failed", file=sys.stderr)
+            any_failed = True
+    if any_failed:
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(prog="ni", description="Network Interceptor")
     sub = parser.add_subparsers(dest="command")
@@ -113,10 +150,21 @@ def main():
     p_rm = mock_sub.add_parser("remove", help="Remove a mock rule")
     p_rm.add_argument("id", help="Rule ID")
 
+    sim_p = sub.add_parser("simulator", help="Manage simulator certificates")
+    sim_sub = sim_p.add_subparsers(dest="sim_command")
+    sim_sub.required = True
+
+    sim_sub.add_parser("list", help="List booted simulators")
+
+    p_sim_cert = sim_sub.add_parser("install-cert", help="Install CA cert in booted simulators")
+    p_sim_cert.add_argument("--udid", help="Target a specific simulator by UDID")
+
     args = parser.parse_args()
 
     if args.command == "mock":
         {"add": cmd_mock_add, "list": cmd_mock_list, "remove": cmd_mock_remove}[args.mock_command](args)
+    elif args.command == "simulator":
+        {"list": cmd_simulator_list, "install-cert": cmd_simulator_install_cert}[args.sim_command](args)
     else:
         {"start": cmd_start, "stop": cmd_stop, "status": cmd_status,
          "list": cmd_list, "get": cmd_get, "clear": cmd_clear}[args.command](args)
